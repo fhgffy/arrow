@@ -3193,3 +3193,41 @@ class TestHumanizeMultiGranularity:
             c.humanize(d, granularity=["quarter", "month", "day"])
             == "a quarter a month and 0 days ago"
         )
+
+    def test_dst_fold_zero_months_regression(self):
+        # 2026-10-06 Fix: Preserve exact original start attributes (e.g., DST fold) by not adding zero relativedelta
+        from datetime import timedelta
+
+        import arrow
+
+        try:
+            from zoneinfo import ZoneInfo
+        except ImportError:
+            from backports.zoneinfo import ZoneInfo
+
+        start = arrow.Arrow(
+            2021, 11, 7, 1, 30, tzinfo=ZoneInfo("America/New_York"), fold=1
+        )
+        end = start.to("UTC") + timedelta(hours=1)
+
+        # Forward, without cal frames
+        assert (
+            end.humanize(start, granularity=["hour", "second"])
+            == "in an hour and 0 seconds"
+        )
+        # Forward, with cal frames (but months=0)
+        assert (
+            end.humanize(start, granularity=["month", "hour", "second"])
+            == "in 0 months an hour and 0 seconds"
+        )
+
+        # Reverse, without cal frames
+        assert (
+            start.humanize(end, granularity=["hour", "second"])
+            == "an hour and 0 seconds ago"
+        )
+        # Reverse, with cal frames (but months=0)
+        assert (
+            start.humanize(end, granularity=["month", "hour", "second"])
+            == "0 months an hour and 0 seconds ago"
+        )

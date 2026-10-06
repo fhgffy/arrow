@@ -1335,7 +1335,11 @@ class Arrow:
                         else:
                             timeframes.append((frame, value))
 
-                _start = _orig_start + relativedelta(months=months_advanced)
+                if months_advanced != 0:
+                    # 2026-10-06 Fix: Preserve exact original start attributes (e.g., DST fold) by not adding zero relativedelta
+                    _start = _orig_start + relativedelta(months=months_advanced)
+                else:
+                    _start = _orig_start
                 _delta_sec = float(int(round((_end - _start).total_seconds())))
 
                 sec_frames: Tuple[TimeFrameLiteral, ...] = (
