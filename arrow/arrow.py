@@ -1301,19 +1301,9 @@ class Arrow:
 
                 timeframes: List[Tuple[TimeFrameLiteral, float]] = []
 
-                def gather_timeframes(_delta: float, _frame: TimeFrameLiteral) -> float:
-                    if _frame in granularity:
-                        value = sign * _delta / self._SECS_MAP[_frame]
-                        _delta %= self._SECS_MAP[_frame]
-                        if trunc(abs(value)) != 1:
-                            timeframes.append(
-                                (cast(TimeFrameLiteral, _frame + "s"), value)
-                            )
-                        else:
-                            timeframes.append((_frame, value))
-                    return _delta
+                _start = self._datetime if sign == -1 else dt
+                _end = dt if sign == -1 else self._datetime
 
-                delta = float(delta_second)
                 frames: Tuple[TimeFrameLiteral, ...] = (
                     "year",
                     "quarter",
@@ -1324,8 +1314,43 @@ class Arrow:
                     "minute",
                     "second",
                 )
+
                 for frame in frames:
-                    delta = gather_timeframes(delta, frame)
+                    if frame in granularity:
+                        if frame == "year":
+                            diff = relativedelta(_end, _start).years
+                            _start += relativedelta(years=diff)
+                        elif frame == "quarter":
+                            months_diff = relativedelta(_end, _start).years * 12 + relativedelta(_end, _start).months
+                            diff = months_diff // 3
+                            _start += relativedelta(months=diff * 3)
+                        elif frame == "month":
+                            months_diff = relativedelta(_end, _start).years * 12 + relativedelta(_end, _start).months
+                            diff = months_diff
+                            _start += relativedelta(months=diff)
+                        elif frame == "week":
+                            diff = (_end - _start).days // 7
+                            _start += relativedelta(days=diff * 7)
+                        elif frame == "day":
+                            diff = (_end - _start).days
+                            _start += relativedelta(days=diff)
+                        elif frame == "hour":
+                            diff = int((_end - _start).total_seconds() // 3600)
+                            _start += relativedelta(hours=diff)
+                        elif frame == "minute":
+                            diff = int((_end - _start).total_seconds() // 60)
+                            _start += relativedelta(minutes=diff)
+                        elif frame == "second":
+                            diff = int((_end - _start).total_seconds())
+                            _start += relativedelta(seconds=diff)
+                        else:
+                            diff = 0
+
+                        value = sign * float(diff)
+                        if trunc(abs(value)) != 1:
+                            timeframes.append((cast(TimeFrameLiteral, frame + "s"), value))
+                        else:
+                            timeframes.append((frame, value))
 
                 if len(timeframes) < len(granularity):
                     raise ValueError(
