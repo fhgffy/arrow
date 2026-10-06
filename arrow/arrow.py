@@ -1320,12 +1320,10 @@ class Arrow:
                             diff = total_months // 3
                             total_months -= diff * 3
                             months_advanced += diff * 3
-                        elif frame == "month":
+                        else:  # frame == "month"
                             diff = total_months
                             total_months = 0
                             months_advanced += diff
-                        else:
-                            diff = 0
 
                         value = sign * float(diff)
                         if trunc(abs(value)) != 1:
