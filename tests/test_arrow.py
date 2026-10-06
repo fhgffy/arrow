@@ -3252,3 +3252,30 @@ class TestHumanizeMultiGranularity:
         assert (
             a.humanize(b, granularity=["month", "hour"]) == "0 months and 13 hours ago"
         )
+
+    def test_timezone_overflow_regression(self):
+        # 2026-10-06 Fix: Test OverflowError fallback for timezone boundary limits
+        from datetime import timedelta, timezone
+
+        import arrow
+
+        start = arrow.Arrow(9999, 12, 31, tzinfo=timezone(timedelta(hours=14)))
+        end = arrow.Arrow(9999, 12, 31, tzinfo=timezone(timedelta(hours=-12)))
+
+        # Test without calendar frames (has_cal = False)
+        assert (
+            end.humanize(start, granularity=["day", "hour"]) == "in a day and 2 hours"
+        )
+        assert (
+            start.humanize(end, granularity=["day", "hour"]) == "a day and 2 hours ago"
+        )
+
+        # Test with calendar frames (has_cal = True)
+        assert (
+            end.humanize(start, granularity=["month", "hour"])
+            == "in 0 months and 26 hours"
+        )
+        assert (
+            start.humanize(end, granularity=["month", "hour"])
+            == "0 months and 26 hours ago"
+        )

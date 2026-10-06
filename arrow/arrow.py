@@ -1306,14 +1306,21 @@ class Arrow:
                 _end = dt if sign == -1 else self._datetime
                 _orig_start = _start
 
-                # Evaluate calendar components matching origin timezone to avoid false cross-zone day jumps
-                _calendar_end = (
-                    _end.astimezone(_orig_start.tzinfo) if _end.tzinfo else _end
-                )
-                rd = relativedelta(_calendar_end, _orig_start)
-                total_months = rd.years * 12 + rd.months
-
                 cal_frames: Tuple[TimeFrameLiteral, ...] = ("year", "quarter", "month")
+                has_cal = any(frame in granularity for frame in cal_frames)
+
+                if has_cal:
+                    try:
+                        # Evaluate calendar components matching origin timezone to avoid false cross-zone day jumps
+                        _calendar_end = (
+                            _end.astimezone(_orig_start.tzinfo) if _end.tzinfo else _end
+                        )
+                        rd = relativedelta(_calendar_end, _orig_start)
+                    except OverflowError:
+                        rd = relativedelta(_end, _orig_start)
+                    total_months = rd.years * 12 + rd.months
+                else:
+                    total_months = 0
                 months_advanced = 0
                 for frame in cal_frames:
                     if frame in granularity:
