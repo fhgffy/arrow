@@ -1303,52 +1303,56 @@ class Arrow:
 
                 _start = self._datetime if sign == -1 else dt
                 _end = dt if sign == -1 else self._datetime
+                _orig_start = _start
 
-                frames: Tuple[TimeFrameLiteral, ...] = (
-                    "year",
-                    "quarter",
-                    "month",
+                rd = relativedelta(_end, _orig_start)
+                total_months = rd.years * 12 + rd.months
+
+                cal_frames: Tuple[TimeFrameLiteral, ...] = ("year", "quarter", "month")
+                months_advanced = 0
+                for frame in cal_frames:
+                    if frame in granularity:
+                        if frame == "year":
+                            diff = total_months // 12
+                            total_months -= diff * 12
+                            months_advanced += diff * 12
+                        elif frame == "quarter":
+                            diff = total_months // 3
+                            total_months -= diff * 3
+                            months_advanced += diff * 3
+                        elif frame == "month":
+                            diff = total_months
+                            total_months = 0
+                            months_advanced += diff
+                        else:
+                            diff = 0
+
+                        value = sign * float(diff)
+                        if trunc(abs(value)) != 1:
+                            timeframes.append(
+                                (cast(TimeFrameLiteral, frame + "s"), value)
+                            )
+                        else:
+                            timeframes.append((frame, value))
+
+                _start = _orig_start + relativedelta(months=months_advanced)
+                _delta_sec = float(int(round((_end - _start).total_seconds())))
+
+                sec_frames: Tuple[TimeFrameLiteral, ...] = (
                     "week",
                     "day",
                     "hour",
                     "minute",
                     "second",
                 )
-
-                for frame in frames:
+                for frame in sec_frames:
                     if frame in granularity:
-                        if frame == "year":
-                            diff = relativedelta(_end, _start).years
-                            _start += relativedelta(years=diff)
-                        elif frame == "quarter":
-                            months_diff = relativedelta(_end, _start).years * 12 + relativedelta(_end, _start).months
-                            diff = months_diff // 3
-                            _start += relativedelta(months=diff * 3)
-                        elif frame == "month":
-                            months_diff = relativedelta(_end, _start).years * 12 + relativedelta(_end, _start).months
-                            diff = months_diff
-                            _start += relativedelta(months=diff)
-                        elif frame == "week":
-                            diff = (_end - _start).days // 7
-                            _start += relativedelta(days=diff * 7)
-                        elif frame == "day":
-                            diff = (_end - _start).days
-                            _start += relativedelta(days=diff)
-                        elif frame == "hour":
-                            diff = int((_end - _start).total_seconds() // 3600)
-                            _start += relativedelta(hours=diff)
-                        elif frame == "minute":
-                            diff = int((_end - _start).total_seconds() // 60)
-                            _start += relativedelta(minutes=diff)
-                        elif frame == "second":
-                            diff = int((_end - _start).total_seconds())
-                            _start += relativedelta(seconds=diff)
-                        else:
-                            diff = 0
-
-                        value = sign * float(diff)
+                        value = sign * _delta_sec / self._SECS_MAP[frame]
+                        _delta_sec %= self._SECS_MAP[frame]
                         if trunc(abs(value)) != 1:
-                            timeframes.append((cast(TimeFrameLiteral, frame + "s"), value))
+                            timeframes.append(
+                                (cast(TimeFrameLiteral, frame + "s"), value)
+                            )
                         else:
                             timeframes.append((frame, value))
 
