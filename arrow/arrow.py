@@ -1301,11 +1301,16 @@ class Arrow:
 
                 timeframes: List[Tuple[TimeFrameLiteral, float]] = []
 
+                # 2026-10-06 Fix: Accurate multiple granularity math bypassing relativity scaling limitations
                 _start = self._datetime if sign == -1 else dt
                 _end = dt if sign == -1 else self._datetime
                 _orig_start = _start
 
-                rd = relativedelta(_end, _orig_start)
+                # Evaluate calendar components matching origin timezone to avoid false cross-zone day jumps
+                _calendar_end = (
+                    _end.astimezone(_orig_start.tzinfo) if _end.tzinfo else _end
+                )
+                rd = relativedelta(_calendar_end, _orig_start)
                 total_months = rd.years * 12 + rd.months
 
                 cal_frames: Tuple[TimeFrameLiteral, ...] = ("year", "quarter", "month")

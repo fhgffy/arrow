@@ -3100,6 +3100,8 @@ class TestArrowUtil:
 
 
 class TestHumanizeMultiGranularity:
+    """2026-10-06 Fix: Accurate regression tests for multi-granularity humanize rounding, end-of-month, and timezone leaps."""
+
     def test_issue_948(self):
         import arrow
 
@@ -3230,4 +3232,23 @@ class TestHumanizeMultiGranularity:
         assert (
             start.humanize(end, granularity=["month", "hour", "second"])
             == "0 months an hour and 0 seconds ago"
+        )
+
+    def test_cross_timezone_month_boundary_regression(self):
+        # 2026-10-06 Fix: Regression test for cross-timezone month boundary calculations
+        from datetime import timedelta, timezone
+
+        import arrow
+
+        a = arrow.Arrow(2020, 2, 1, tzinfo=timezone(timedelta(hours=14)))
+        b = arrow.Arrow(2020, 1, 31, 23, 30, tzinfo=timezone.utc)
+
+        # Forward
+        assert (
+            b.humanize(a, granularity=["month", "hour"]) == "in 0 months and 13 hours"
+        )
+
+        # Reverse
+        assert (
+            a.humanize(b, granularity=["month", "hour"]) == "0 months and 13 hours ago"
         )
